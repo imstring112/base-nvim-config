@@ -1,48 +1,55 @@
 return {
   "nvim-treesitter/nvim-treesitter",
-    config = function ()
-      require('nvim-treesitter').setup({
-      -- A list of parser names, or "all" (the listed parsers MUST always be installed)
+  dependencies = {
+    'hrsh7th/cmp-nvim-lsp',      -- LSP completion source
+    'hrsh7th/cmp-buffer',        -- Buffer completion source
+    'hrsh7th/cmp-path',          -- File path completion source
+    'saadparwaiz1/cmp_luasnip',  -- Snippet completion source
+    'L3MON4D3/LuaSnip',          -- Snippet engine
+    'rafamadriz/friendly-snippets'
+  },
+  config = function ()
+    require('nvim-treesitter').setup({
       ensure_installed = { "c", "lua", "vim", "vimdoc", "query", "markdown", "markdown_inline", "php", "javascript", "typescript" },
-
-      -- Install parsers synchronously (only applied to `ensure_installed`)
       sync_install = false,
-
-      -- Automatically install missing parsers when entering buffer
-      -- Recommendation: set to false if you don't have `tree-sitter` CLI installed locally
       auto_install = true,
-
-      -- List of parsers to ignore installing (or "all")
       ignore_install = { },
-
       indent = {enable = true},
-
-      ---- If you need to change the installation directory of the parsers (see -> Advanced Setup)
-      -- parser_install_dir = "/some/path/to/store/parsers", -- Remember to run vim.opt.runtimepath:append("/some/path/to/store/parsers")!
-
       highlight = {
         enable = true,
-
-        -- NOTE: these are the names of the parsers and not the filetype. (for example if you want to
-        -- disable highlighting for the `tex` filetype, you need to include `latex` in this list as this is
-        -- the name of the parser)
-        -- list of language that will be disabled
         disable = { "c", "rust" },
-        -- Or use a function for more flexibility, e.g. to disable slow treesitter highlight for large files
         disable = function(lang, buf)
-            local max_filesize = 100 * 1024 -- 100 KB
-            local ok, stats = pcall(vim.loop.fs_stat, vim.api.nvim_buf_get_name(buf))
-            if ok and stats and stats.size > max_filesize then
-                return true
-            end
+          local max_filesize = 100 * 1024 -- 100 KB
+          local ok, stats = pcall(vim.loop.fs_stat, vim.api.nvim_buf_get_name(buf))
+          if ok and stats and stats.size > max_filesize then
+            return true
+          end
         end,
-
-        -- Setting this to true will run `:h syntax` and tree-sitter at the same time.
-        -- Set this to `true` if you depend on 'syntax' being enabled (like for indentation).
-        -- Using this option may slow down your editor, and you may see some duplicate highlights.
-        -- Instead of true it can also be a list of languages
         additional_vim_regex_highlighting = false,
       },
+    })
+
+    local cmp = require('cmp')
+    local luasnip = require('luasnip')
+
+    cmp.setup({
+      snippet = {
+        expand = function(args)
+          luasnip.lsp_expand(args.body)
+        end,
+      },
+      mapping = {
+        ['<Tab>'] = cmp.mapping.select_next_item(),
+        ['<S-Tab>'] = cmp.mapping.select_prev_item(),
+        ['<C-Space>'] = cmp.mapping.complete(),
+        ['<CR>'] = cmp.mapping.confirm({ select = true }), -- Confirm selection with Enter
+      },
+      sources = cmp.config.sources({
+        { name = 'nvim_lsp' },    -- LSP source for language-aware completion
+        { name = 'luasnip' },     -- Snippet source
+        { name = 'buffer' },      -- Buffer source for text in open buffers
+        { name = 'path' },        -- Path source for file paths
+      }),
     })
   end
 }
